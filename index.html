@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- cache-busting: browser obeys these; Pages CDN still owns its 10-min TTL
+     but a reload will always hit origin on the next revalidation window -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="build" content="2026-04-15T08:30:00Z">
 <title>hive — limit-free multi-provider AI chat orchestra</title>
 <meta name="description" content="hive: limit-free multi-provider AI chat orchestra. TUI + CLI. Self-hosted memory. Docker-style sandbox.">
 <style>
