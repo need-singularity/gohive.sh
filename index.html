@@ -54,29 +54,32 @@
     border-radius: 8px;
     padding: 1rem 1.25rem;
     margin-bottom: 2rem;
-    position: relative;
     cursor: pointer;
     transition: border-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
   .install-box:hover { border-color: var(--accent); }
   .install-box code {
     font-size: 0.95rem;
     color: var(--accent);
     word-break: break-all;
+    flex: 1;
+    min-width: 0;
   }
   .install-box .copy-hint {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
     color: var(--dim);
     font-size: 0.85rem;
+    flex-shrink: 0;
     transition: color 0.2s, transform 0.2s;
+    transform-origin: center right;
+    display: inline-block;
   }
   .install-box:hover .copy-hint { color: var(--fg); }
   .install-box .copy-hint.copied {
     color: var(--accent);
-    transform: translateY(-50%) scale(1.3);
+    transform: scale(1.4);
   }
   .features {
     display: grid;
