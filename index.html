@@ -70,10 +70,14 @@
     top: 50%;
     transform: translateY(-50%);
     color: var(--dim);
-    font-size: 0.75rem;
-    transition: color 0.2s;
+    font-size: 0.85rem;
+    transition: color 0.2s, transform 0.2s;
   }
   .install-box:hover .copy-hint { color: var(--fg); }
+  .install-box .copy-hint.copied {
+    color: var(--accent);
+    transform: translateY(-50%) scale(1.3);
+  }
   .features {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -126,7 +130,7 @@
 
   <div class="install-box" onclick="copy(this)">
     <code>curl -fsSL https://gohive.sh/install | bash</code>
-    <span class="copy-hint">click to copy</span>
+    <span class="copy-hint" id="copyHint">copy</span>
   </div>
 
   <div class="features">
@@ -170,8 +174,9 @@ function copy(el) {
   const text = el.querySelector('code').textContent;
   navigator.clipboard.writeText(text).then(() => {
     const hint = el.querySelector('.copy-hint');
-    hint.textContent = 'copied!';
-    setTimeout(() => { hint.textContent = 'click to copy'; }, 2000);
+    hint.textContent = '✓';
+    hint.classList.add('copied');
+    setTimeout(() => { hint.textContent = 'copy'; hint.classList.remove('copied'); }, 2000);
   });
 }
 </script>
