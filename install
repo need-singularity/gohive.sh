@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+# gohive.sh/install — hive installer
+# Usage: curl -fsSL gohive.sh/install | bash
+#
+# Installs:
+#   1. hexa runtime (if missing)
+#   2. hive CLI + TUI
+#
+# Environment:
+#   HIVE_DIR     — install prefix        (default: ~/.hive)
+#   HIVE_VERSION — release tag to fetch   (default: latest)
+#   NO_MODIFY_PATH — skip PATH modification if set
+
+set -euo pipefail
+
+# ── colours ────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+
+info()  { printf "${CYAN}▸${RESET} %s\n" "$*"; }
+ok()    { printf "${GREEN}✓${RESET} %s\n" "$*"; }
+warn()  { printf "${YELLOW}!${RESET} %s\n" "$*"; }
+fail()  { printf "${RED}✗${RESET} %s\n" "$*" >&2; exit 1; }
+
+# ── detect platform ────────────────────────────────────
+detect_platform() {
+    OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    ARCH="$(uname -m)"
+
+    case "$OS" in
+        darwin)  OS="darwin" ;;
+        linux)   OS="linux"  ;;
+        *)       fail "Unsupported OS: $OS" ;;
+    esac
+
+    case "$ARCH" in
+        x86_64|amd64)  ARCH="x64"   ;;
+        aarch64|arm64) ARCH="arm64" ;;
+        *)             fail "Unsupported architecture: $ARCH" ;;
+    esac
+
+    PLATFORM="${OS}-${ARCH}"
+    info "Platform: ${BOLD}${PLATFORM}${RESET}"
+}
+
+# ── config ─────────────────────────────────────────────
+HIVE_DIR="${HIVE_DIR:-$HOME/.hive}"
+HIVE_BIN="$HIVE_DIR/bin"
+HIVE_VERSION="${HIVE_VERSION:-latest}"
+REPO="need-singularity/hive"
+
+# ── prerequisites ──────────────────────────────────────
+check_deps() {
+    for cmd in curl tar git; do
+        command -v "$cmd" >/dev/null 2>&1 || fail "Required: $cmd"
+    done
+}
+
+check_node() {
+    if ! command -v node >/dev/null 2>&1; then
+        fail "Node.js 20+ is required for hive TUI. Install: https://nodejs.org"
+    fi
+    NODE_VER="$(node -v | sed 's/^v//' | cut -d. -f1)"
+    if [ "$NODE_VER" -lt 20 ] 2>/dev/null; then
+        fail "Node.js 20+ required (found v${NODE_VER})"
+    fi
+    ok "Node.js $(node -v)"
+}
+
+# ── install hexa ───────────────────────────────────────
+install_hexa() {
+    if command -v hexa >/dev/null 2>&1; then
+        ok "hexa already installed: $(command -v hexa)"
+        return
+    fi
+    if [ -x "$HOME/.hx/bin/hexa" ]; then
+        ok "hexa found at ~/.hx/bin/hexa"
+        return
+    fi
+
+    info "Installing hexa runtime..."
+    curl -fsSL https://raw.githubusercontent.com/need-singularity/hexa-lang/main/install.sh | bash
+    ok "hexa installed"
+}
+
+# ── resolve version ────────────────────────────────────
+resolve_version() {
+    if [ "$HIVE_VERSION" = "latest" ]; then
+        info "Fetching latest release..."
+        HIVE_VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+            | grep '"tag_name"' | head -1 | sed 's/.*: "//;s/".*//')" || true
+
+        # fallback to main if no releases yet
+        if [ -z "$HIVE_VERSION" ]; then
+            HIVE_VERSION="main"
+            warn "No releases found — installing from main branch"
+        fi
+    fi
+    info "Version: ${BOLD}${HIVE_VERSION}${RESET}"
+}
+
+# ── download & install ─────────────────────────────────
+install_hive() {
+    mkdir -p "$HIVE_DIR" "$HIVE_BIN"
+
+    if [ "$HIVE_VERSION" = "main" ]; then
+        # no releases yet — clone from source
+        if [ -d "$HIVE_DIR/src" ]; then
+            info "Updating hive source..."
+            git -C "$HIVE_DIR/src" pull --ff-only 2>/dev/null || true
+        else
+            info "Cloning hive..."
+            git clone --depth 1 "https://github.com/${REPO}.git" "$HIVE_DIR/src"
+        fi
+        HIVE_SRC="$HIVE_DIR/src"
+    else
+        # download release tarball
+        TARBALL_URL="https://github.com/${REPO}/releases/download/${HIVE_VERSION}/hive-${PLATFORM}.tar.gz"
+        info "Downloading ${TARBALL_URL}..."
+        TMPDIR="$(mktemp -d)"
+        trap 'rm -rf "$TMPDIR"' EXIT
+        curl -fsSL "$TARBALL_URL" -o "$TMPDIR/hive.tar.gz"
+        tar xzf "$TMPDIR/hive.tar.gz" -C "$HIVE_DIR"
+        HIVE_SRC="$HIVE_DIR"
+    fi
+
+    ok "hive installed to $HIVE_DIR"
+}
+
+# ── build TUI ──────────────────────────────────────────
+build_tui() {
+    CHAT_DIR="$HIVE_SRC/chat"
+    if [ -d "$CHAT_DIR" ] && [ -f "$CHAT_DIR/package.json" ]; then
+        info "Building hive TUI..."
+        (cd "$CHAT_DIR" && npm install --silent 2>/dev/null && npm run build --silent 2>/dev/null)
+        ok "TUI built"
+    fi
+}
+
+# ── symlink binaries ───────────────────────────────────
+link_bins() {
+    HIVE_SRC_BIN="$HIVE_SRC/bin"
+    if [ -d "$HIVE_SRC_BIN" ]; then
+        for f in "$HIVE_SRC_BIN"/*; do
+            name="$(basename "$f")"
+            ln -sf "$f" "$HIVE_BIN/$name"
+        done
+        chmod +x "$HIVE_BIN"/*
+    fi
+    ok "Binaries linked to $HIVE_BIN"
+}
+
+# ── PATH setup ─────────────────────────────────────────
+setup_path() {
+    if [ -n "${NO_MODIFY_PATH:-}" ]; then return; fi
+
+    case ":$PATH:" in
+        *":$HIVE_BIN:"*) ok "\$PATH already includes $HIVE_BIN"; return ;;
+    esac
+
+    SHELL_NAME="$(basename "$SHELL")"
+    case "$SHELL_NAME" in
+        zsh)  RC="$HOME/.zshrc"    ;;
+        bash) RC="$HOME/.bashrc"   ;;
+        fish) RC="$HOME/.config/fish/config.fish" ;;
+        *)    RC="$HOME/.profile"  ;;
+    esac
+
+    LINE="export PATH=\"$HIVE_BIN:\$PATH\""
+    if [ "$SHELL_NAME" = "fish" ]; then
+        LINE="set -gx PATH $HIVE_BIN \$PATH"
+    fi
+
+    if [ -f "$RC" ] && grep -qF "$HIVE_BIN" "$RC" 2>/dev/null; then
+        ok "PATH entry already in $RC"
+    else
+        printf '\n# hive\n%s\n' "$LINE" >> "$RC"
+        ok "Added $HIVE_BIN to PATH in $RC"
+    fi
+}
+
+# ── banner ─────────────────────────────────────────────
+banner() {
+    printf "\n${BOLD}"
+    cat << 'ART'
+    __    _
+   / /_  (_)   _____
+  / __ \/ / | / / _ \
+ / / / / /| |/ /  __/
+/_/ /_/_/ |___/\___/
+
+ART
+    printf "${RESET}"
+    printf "  ${CYAN}limit-free multi-provider AI chat orchestra${RESET}\n\n"
+}
+
+finish() {
+    printf "\n${GREEN}${BOLD}Done!${RESET} Run ${CYAN}hive${RESET} to start.\n"
+    printf "  If hive is not found, restart your shell or run:\n"
+    printf "  ${CYAN}export PATH=\"$HIVE_BIN:\$PATH\"${RESET}\n\n"
+}
+
+# ── main ───────────────────────────────────────────────
+main() {
+    banner
+    detect_platform
+    check_deps
+    check_node
+    install_hexa
+    resolve_version
+    install_hive
+    build_tui
+    link_bins
+    setup_path
+    finish
+}
+
+main "$@"

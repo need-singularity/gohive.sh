@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hive — limit-free multi-provider AI chat orchestra</title>
+<meta name="description" content="hive: limit-free multi-provider AI chat orchestra. TUI + CLI. Self-hosted memory. Docker-style sandbox.">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #e0e0e0;
+    --dim: #666;
+    --accent: #f0b832;
+    --code-bg: #161616;
+    --border: #222;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 640px;
+    width: 100%;
+  }
+  .logo {
+    font-size: 3rem;
+    margin-bottom: 0.25rem;
+    text-align: center;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+  .tagline {
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.9rem;
+    margin-bottom: 2.5rem;
+  }
+  .install-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .install-box:hover { border-color: var(--accent); }
+  .install-box code {
+    font-size: 0.95rem;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  .install-box .copy-hint {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--dim);
+    font-size: 0.75rem;
+    transition: color 0.2s;
+  }
+  .install-box:hover .copy-hint { color: var(--fg); }
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .feature {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .feature-title {
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+  }
+  .feature-desc {
+    font-size: 0.8rem;
+    color: var(--dim);
+  }
+  .links {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  .links a {
+    color: var(--dim);
+    text-decoration: none;
+    margin: 0 1rem;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+  }
+  .links a:hover { color: var(--accent); }
+  .footer {
+    margin-top: 3rem;
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+  }
+  @media (max-width: 480px) {
+    .features { grid-template-columns: 1fr; }
+    h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">🐝</div>
+  <h1>hive</h1>
+  <p class="tagline">limit-free multi-provider AI chat orchestra</p>
+
+  <div class="install-box" onclick="copy(this)">
+    <code>curl -fsSL gohive.sh/install | bash</code>
+    <span class="copy-hint">click to copy</span>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-title">multi-provider</div>
+      <div class="feature-desc">Claude, Gemini, OpenAI, Ollama — one interface</div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">limit-free</div>
+      <div class="feature-desc">account pool rotation, no rate-limit walls</div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">TUI + CLI</div>
+      <div class="feature-desc">Ink React TUI default, hexa CLI for scripts</div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">self-hosted memory</div>
+      <div class="feature-desc">4-layer local memory, no cloud dependency</div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">sandbox</div>
+      <div class="feature-desc">Docker-style CPU/mem/timeout gating</div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">hexa-native</div>
+      <div class="feature-desc">built on hexa-lang, the perfect-number language</div>
+    </div>
+  </div>
+
+  <div class="links">
+    <a href="https://github.com/need-singularity/hive">GitHub</a>
+    <a href="https://github.com/need-singularity/hive#usage">Docs</a>
+    <a href="https://github.com/need-singularity/hive/releases">Releases</a>
+  </div>
+
+  <div class="footer">need-singularity</div>
+</div>
+
+<script>
+function copy(el) {
+  const text = el.querySelector('code').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const hint = el.querySelector('.copy-hint');
+    hint.textContent = 'copied!';
+    setTimeout(() => { hint.textContent = 'click to copy'; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
